@@ -5,6 +5,7 @@ from uuid import uuid4
 from database import db, metadata
 
 from sqlalchemy import Table, Column, String, Float, DateTime, ForeignKey, Enum
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 
 
@@ -16,6 +17,8 @@ nasabah = Table(
     Column("nik", String, nullable=False),
     Column("no_hp", String),
     Column("created_at", DateTime, nullable=False),
+    UniqueConstraint("nik", name="nik_unique"),
+    UniqueConstraint("no_hp", name="no_hp_unique")
 )
 
 rekening = Table(
@@ -54,6 +57,16 @@ class Nasabah:
     @classmethod
     async def get(self, id):
         query = nasabah.select().where(nasabah.c.id == id)
+        return await db.fetch_one(query)
+
+    @classmethod
+    async def get_by_nik(self, nik):
+        query = nasabah.select().where(nasabah.c.nik == nik)
+        return await db.fetch_one(query)
+
+    @classmethod
+    async def get_by_no_hp(self, no_hp):
+        query = nasabah.select().where(nasabah.c.no_hp == no_hp)
         return await db.fetch_one(query)
 
     @classmethod

@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from asyncpg import UniqueViolationError
+
 from database import db
 from logger import logger
 from .models import TransactionType
@@ -22,6 +24,15 @@ async def register(data: NasabahSchema):
         no_rekening = await RekeningModel.create(nasabah_id=nasabah_id)
         await transaction.commit()
         return {"no_rekening": no_rekening}
+    except UniqueViolationError as e:
+        logger.error(f"{e}")
+        await transaction.rollback()
+        return JSONResponse(
+            status_code=400,
+            content={
+                "remark": f"Ditemukan data duplikat: NIK atau No HP sudah pernah terdaftar"
+            },
+        )
     except Exception as e:
         logger.error(f"{e}")
         await transaction.rollback()
@@ -30,9 +41,14 @@ async def register(data: NasabahSchema):
 
 @router.post("/tabung")
 async def tabung(data: TransaksiSchema):
+    rekening_sebelum = await RekeningModel.get(data.no_rekening)
+    if rekening_sebelum is None:
+        return JSONResponse(
+            status_code=400, content={"remark": "Nomor Rekening Tidak Ditemukan"}
+        )
+
     transaction = await db.transaction()
     try:
-        rekening_sebelum = await RekeningModel.get(data.no_rekening)
 
         transaksi = {
             "rekening_id": rekening_sebelum["id"],
@@ -57,6 +73,14 @@ async def tabung(data: TransaksiSchema):
 
 @router.post("/tarik")
 async def tarik(data: TransaksiSchema):
+    rekening_sebelum = await RekeningModel.get(data.no_rekening)
+    if rekening_sebelum is None:
+        return JSONResponse(
+            status_code=400, content={"remark": "Nomor Rekening Tidak Ditemukan"}
+        )
+    if rekening_sebelum.saldo < data.nominal:
+        return JSONResponse(status_code=400, content={"remark": "Saldo tidak cukup"})
+
     transaction = await db.transaction()
     try:
         rekening_sebelum = await RekeningModel.get(data.no_rekening)
@@ -84,6 +108,12 @@ async def tarik(data: TransaksiSchema):
 
 @router.get("/saldo/{no_rekening}")
 async def cek_saldo(no_rekening):
+    rekening_sebelum = await RekeningModel.get(no_rekening)
+    if rekening_sebelum is None:
+        return JSONResponse(
+            status_code=400, content={"remark": "Nomor Rekening Tidak Ditemukan"}
+        )
+
     try:
         rekening = await RekeningModel.get(no_rekening)
         return {"saldo": rekening.saldo}

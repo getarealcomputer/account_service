@@ -14,7 +14,7 @@ class Nasabah(BaseModel):
     @validator("nama")
     def check_non_empty_fields(cls, v):
         if not v.strip():
-            raise ValueError('username must not be an empty string')
+            raise ValueError("username must not be an empty string")
         return v
 
     @validator("nik")
@@ -75,6 +75,7 @@ class Nasabah(BaseModel):
             raise ValueError("Invalid phone number format")
 
         return v
+
 
 class Transaksi(BaseModel):
     no_rekening: str
