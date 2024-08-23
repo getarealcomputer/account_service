@@ -58,7 +58,7 @@ Account Service in compliance with REST API principles
 
 ### Built With
 
-* [![FastAPI][FastAPI-url]
+* ![FastAPI][FastAPI-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
